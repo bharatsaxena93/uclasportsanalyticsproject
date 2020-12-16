@@ -1,0 +1,101 @@
+---
+title: "Clippers"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+# Read Data
+```{r}
+library("readxl")
+data <- read_excel("F:/MBA Applications/Admissionado/UCLA Admit/Tutorials/UCLA/Sports Analytics/HW1/Clippers attendance data - cleaned.xlsx")
+str(data)
+data$opponent <- as.factor(data$opponent)
+data$opponent_city <- as.factor(data$opponent_city)
+data$conference <- as.factor(data$conference)
+data$year_opened <- as.factor(data$year_opened)
+data$playoffs <- as.factor(data$playoffs)
+data$game_day <- as.factor(data$game_day)
+data$game_period <- as.factor(data$game_period)
+data$game_result <- as.factor(data$game_result)
+data$overtime <- as.factor(data$overtime)
+data$streak <- as.factor(data$streak)
+table(data$attendance)
+```
+
+# Data Partition
+```{r}
+set.seed(123)
+ind <- sample(2, nrow(data), replace = TRUE, prob = c(0.7, 0.3))
+train <- data[ind==1,]
+test <- data[ind==2,]
+```
+
+# Random Forest model
+```{r}
+library(randomForest)
+set.seed(222)
+rf <- randomForest(attendance~., data=train,
+                   ntree = 100,
+                   mtry = 6,
+                   importance = TRUE,
+                   proximity = TRUE)
+print(rf)
+```
+
+# Prediction - train data
+```{r}
+library(caret)
+p1 <- predict(rf, train)
+print(p1)
+```
+
+# Prediction - test data
+```{r}
+p2 <- predict(rf, test)
+print(p2)
+```
+
+# Error rate of Random Forest
+```{r}
+plot(rf)
+```
+
+# Error Checking
+```{r}
+# Root Mean Square Error
+RMSE <- function(predicted, actual){
+  rmse <- (mean((predicted - actual)^2))^0.5
+}
+
+# R^2
+Rsquare <- function(predicted, actual){
+  mu <- mean(actual)
+  rse <- mean((predicted - actual)^2)/mean((mu - actual)^2)
+  r2 <- 1-rse
+}
+
+rf.RMSE <- RMSE(p2, test$attendance)
+rf.R2 <- Rsquare(p2, test$attendance)
+
+#rf.RMSE <- RMSE(p1, train$attendance)
+#rf.R2 <- Rsquare(p1, train$attendance)
+```
+
+# Variable Importance
+```{r}
+varImpPlot(rf,
+           sort = T,
+           n.var = 10,
+           main = "Top 10 - Variable Importance")
+importance(rf)
+varUsed(rf)
+```
